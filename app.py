@@ -60,7 +60,6 @@ if all(x is None for x in [fuel_df_tcs, fuel_df_irving, tolls_df, loads_df, driv
     st.info("Upload at least some data on the left to begin.")
     st.stop()
 
-
 # ======================================================
 # 1) DRIVER MASTER MAP (cards + EZPass → driver/truck)
 # ======================================================
@@ -278,14 +277,17 @@ if driver_miles_df is not None:
     dm["home_days_est"] = 7 - dm["days_worked"].clip(0, 7)
 
     driver_miles_summary = dm[["driver", "period_miles", "days_worked", "home_days_est", "period_driver_pay"]]
-
 # ==========================
 # 6) MERGE EVERYTHING (trip/date level)
 # ==========================
 frames = []
 
 if loads_agg is not None:
-    frames.append(loads_agg[["date", "driver", "truck", "revenue", "miles", "lane"]])
+    # Only use the columns that actually exist in the loads file
+    base_cols = ["date", "driver", "truck", "revenue", "miles", "lane"]
+    existing_cols = [c for c in base_cols if c in loads_agg.columns]
+    if existing_cols:
+        frames.append(loads_agg[existing_cols])
 
 if fuel_df is not None:
     fuel_agg = fuel_df.groupby(["date", "driver", "truck"], dropna=False)["fuel_cost"].sum().reset_index()
@@ -380,7 +382,6 @@ col5.metric("Profit (net)", f"${total_prof:,.2f}")
 col6.metric("Miles",        f"{total_miles:,.0f}")
 
 st.markdown("---")
-
 # ==========================
 # 9) VIEWS
 # ==========================
@@ -394,8 +395,12 @@ if view == "Overview":
     ].sum()
 
     if "miles" in driver_summary.columns:
-        driver_summary["profit_per_mile_net"] = driver_summary["profit"] / driver_summary["miles"].replace(0, pd.NA)
-        driver_summary["profit_per_mile_before_pay"] = driver_summary["profit_before_pay"] / driver_summary["miles"].replace(0, pd.NA)
+        driver_summary["profit_per_mile_net"] = (
+            driver_summary["profit"] / driver_summary["miles"].replace(0, pd.NA)
+        )
+        driver_summary["profit_per_mile_before_pay"] = (
+            driver_summary["profit_before_pay"] / driver_summary["miles"].replace(0, pd.NA)
+        )
 
     st.dataframe(
         driver_summary.sort_values("profit", ascending=False)
@@ -408,8 +413,12 @@ if view == "Overview":
     ].sum()
 
     if "miles" in truck_summary.columns:
-        truck_summary["profit_per_mile_net"] = truck_summary["profit"] / truck_summary["miles"].replace(0, pd.NA)
-        truck_summary["profit_per_mile_before_pay"] = truck_summary["profit_before_pay"] / truck_summary["miles"].replace(0, pd.NA)
+        truck_summary["profit_per_mile_net"] = (
+            truck_summary["profit"] / truck_summary["miles"].replace(0, pd.NA)
+        )
+        truck_summary["profit_per_mile_before_pay"] = (
+            truck_summary["profit_before_pay"] / truck_summary["miles"].replace(0, pd.NA)
+        )
 
     st.dataframe(
         truck_summary.sort_values("profit", ascending=False)
@@ -431,9 +440,15 @@ elif view == "Lane Profit":
     ].sum()
 
     if "miles" in lane_summary.columns:
-        lane_summary["rev_per_mile"]    = lane_summary["revenue"] / lane_summary["miles"].replace(0, pd.NA)
-        lane_summary["profit_per_mile_net"] = lane_summary["profit"] / lane_summary["miles"].replace(0, pd.NA)
-        lane_summary["profit_per_mile_before_pay"] = lane_summary["profit_before_pay"] / lane_summary["miles"].replace(0, pd.NA)
+        lane_summary["rev_per_mile"] = (
+            lane_summary["revenue"] / lane_summary["miles"].replace(0, pd.NA)
+        )
+        lane_summary["profit_per_mile_net"] = (
+            lane_summary["profit"] / lane_summary["miles"].replace(0, pd.NA)
+        )
+        lane_summary["profit_per_mile_before_pay"] = (
+            lane_summary["profit_before_pay"] / lane_summary["miles"].replace(0, pd.NA)
+        )
 
     if profit_mode.startswith("After"):
         lane_summary["profit_used"] = lane_summary["profit"]
@@ -548,9 +563,12 @@ elif view == "Weekly / Monthly":
 
     st.subheader(f"{label} Summary")
 
-    per = f.groupby(grp_col)[["revenue", "fuel_cost", "toll_cost", "driver_pay", "profit_before_pay", "profit", "miles"]].sum()
+    per = f.groupby(grp_col)[
+        ["revenue", "fuel_cost", "toll_cost", "driver_pay", "profit_before_pay", "profit", "miles"]
+    ].sum()
+
     if "miles" in per.columns:
-        per["rev_per_mile"]    = per["revenue"] / per["miles"].replace(0, pd.NA)
+        per["rev_per_mile"] = per["revenue"] / per["miles"].replace(0, pd.NA)
         per["profit_per_mile"] = per["profit"] / per["miles"].replace(0, pd.NA)
 
     st.dataframe(per.style.format("${:,.2f}"))
@@ -592,7 +610,7 @@ elif view == "Home Time & Miles":
         home_df = driver_miles_summary.copy()
         st.dataframe(
             home_df[["driver", "days_worked", "home_days_est", "period_miles", "period_driver_pay"]]
-            .sort_values("home_days_est", ascending=False)
+            .sort_values("home_days_est", ascending=False)  # most home days at the top
             .style.format({
                 "period_miles": "{:,.0f}",
                 "period_driver_pay": "${:,.2f}",
