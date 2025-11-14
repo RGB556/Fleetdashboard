@@ -55,9 +55,11 @@ tolls_df        = load_any(toll_file)
 loads_df        = load_any(loads_file)
 driver_miles_df = load_any(driver_miles_file)
 
-if not any([fuel_df_tcs, fuel_df_irving, tolls_df, loads_df, driver_miles_df]):
+# If ALL of the main dataframes are still None, stop and show message
+if all(x is None for x in [fuel_df_tcs, fuel_df_irving, tolls_df, loads_df, driver_miles_df]):
     st.info("Upload at least some data on the left to begin.")
     st.stop()
+
 
 # ======================================================
 # 1) DRIVER MASTER MAP (cards + EZPass → driver/truck)
