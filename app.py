@@ -333,7 +333,10 @@ combined["profit"] = combined["profit_before_pay"] - combined.get("driver_pay", 
 
 combined["date"] = pd.to_datetime(combined["date"], errors="coerce")
 combined["week"] = combined["date"].apply(thursday_week_start)
-combined["month"] = combined["date"].dt.to_period("M").apply(lambda r: r.start_time)
+combined["month"] = combined["date"]combined["date"] = pd.to_datetime(combined["date"], errors="coerce")
+combined["week"] = combined["date"].apply(thursday_week_start)
+combined["month"] = combined["date"].dt.to_period("M").dt.to_timestamp()
+(lambda r: r.start_time)
 
 # ==========================
 # 7) FILTERS
